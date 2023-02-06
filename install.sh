@@ -33,7 +33,8 @@ echo 'Activating environment.'
 conda activate openwpm
 
 echo 'Installing firefox.'
-./scripts/install-firefox.sh
+# ./scripts/install-firefox.sh
+./scripts/install-firefox-local.sh
 
 echo 'Building extension.'
 ./scripts/build-extension.sh
