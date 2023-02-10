@@ -4,7 +4,7 @@ BannerClick
 
 BannerClick is a web privacy measurement tool that is built on top of [OpenWPM](https://github.com/openwpm/OpenWPM).
 It is designed to detect and interact with cookie banners.
-For more details on how BannerClick works please check out [this paper]().
+For more details on how BannerClick works please read [our paper](https://bannerclick.github.io/).
 
 
 Installation
