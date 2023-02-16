@@ -47,3 +47,19 @@ Configuration
 -----------
 
 Aside from the [configuration](https://github.com/openwpm/OpenWPM/blob/master/docs/Configuration.md) for OpenWPM, there are other parameters that can be modified in [`config.py`](https://github.com/bannerclick/bannerclick/blob/bannerclick_v0.18.0/bannerclick/config.py) to configure BannerClick. Each parameter is documented in the file directly. For example, `MOBILE_AGENT` can be set to simulate a mobile agent.
+
+
+Attribution
+------------
+
+If you use BannerClick in your research, please reference it with the following citation:
+
+```bibtex
+@inproceedings{rasaii2023exploring,
+    title = {Exploring the Cookieverse: A Multi-Perspective Analysis of Web Cookies},
+    author = {Ali Rasaii and Shivani Singh and Devashish Gosain and Oliver Gasser},
+    booktitle = {Proceedings of the 2023 Passive and Active Measurement Conference},
+    year = {2023},
+    month = mar
+}
+```
