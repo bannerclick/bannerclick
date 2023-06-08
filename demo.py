@@ -82,17 +82,17 @@ else:
 # Update browser configuration (use this for per-browser settings)
 for browser_param in browser_params:
     # Record HTTP Requests and Responses
-    browser_param.http_instrument = False
+    browser_param.http_instrument = True
     # Record cookie changes
-    browser_param.cookie_instrument = False
+    browser_param.cookie_instrument = True
     # Record Navigations
-    browser_param.navigation_instrument = False
+    browser_param.navigation_instrument = True
     # Record JS Web API calls
-    browser_param.js_instrument = False
+    browser_param.js_instrument = True
     # Record the callstack of all WebRequests made
-    browser_param.callstack_instrument = False
+    browser_param.callstack_instrument = True
     # Record DNS resolution
-    browser_param.dns_instrument = False
+    browser_param.dns_instrument = True
     if MOBILE_AGENT:
         browser_param.prefs["general.useragent.override"] = "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/93.0"
     browser_param.extension_enabled = XPI
