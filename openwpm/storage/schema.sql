@@ -5,6 +5,60 @@
  * AND Schema-Documentation.md
  */
 
+
+
+/* 
+# custom tables 
+*/
+CREATE TABLE IF NOT EXISTS visits (
+    visit_id INTEGER PRIMARY KEY,
+    domain VARCHAR(100),
+	url VARCHAR(200),
+	run_url VARCHAR(200),
+	status INTEGER,
+	lang VARCHAR(50),
+	banners INTEGER DEFAULT 0,
+	btn_status INTEGER,
+    btn_set_status INTEGER,
+    interact_time INTEGER,
+	ttw INTEGER,
+	__cmp BOOLEAN DEFAULT FALSE,
+	__tcfapi BOOLEAN DEFAULT FALSE,
+	__tcfapiLocator DEFAULT FALSE,
+	cmp_id INTEGER,
+	cmp_name VARCHAR(100),
+	pv BOOLEAN DEFAULT FALSE,
+    nc_cmp_name VARCHAR(100),
+    dnsmpi VARCHAR(100),
+    body_html TEXT
+);
+
+CREATE TABLE IF NOT EXISTS banners (
+	banner_id INTEGER PRIMARY KEY,
+    visit_id INTEGER,
+    domain VARCHAR(100),
+    lang VARCHAR(50),
+	iFrame BOOLEAN DEFAULT FALSE,
+    shadow_dom BOOLEAN DEFAULT FALSE,
+	captured_area FLOAT,
+	x INTEGER,
+	y INTEGER,
+	w INTEGER,
+	h INTEGER,
+	FOREIGN KEY(visit_id) REFERENCES visits(visit_id)
+);
+
+CREATE TABLE IF NOT EXISTS htmls (
+	banner_id INTEGER PRIMARY KEY,
+    visit_id INTEGER,
+    domain VARCHAR(100),
+    html TEXT,
+    FOREIGN KEY(visit_id) REFERENCES visits(visit_id)
+);
+/* custom tables end*/
+
+
+
 CREATE TABLE IF NOT EXISTS task (
     task_id INTEGER PRIMARY KEY AUTOINCREMENT,
     start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -246,3 +300,8 @@ CREATE TABLE IF NOT EXISTS dns_responses (
   is_TRR INTEGER, 
   time_stamp DATETIME NOT NULL
  );
+
+
+
+
+
