@@ -12,6 +12,7 @@ import threading
 from selenium.webdriver.firefox import service as FirefoxServiceModule
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.firefox.options import Options
+from bannerclick.config import BC_TEMP_DIR
 
 from openwpm.types import BrowserId
 
@@ -24,7 +25,8 @@ def mktempfifo(suffix="", prefix="tmp", dir=None):
     directory.
     """
     if dir is None:
-        dir = tempfile.gettempdir()
+        # dir = tempfile.gettempdir()
+        dir = BC_TEMP_DIR
     names = tempfile._get_candidate_names()
     for seq in range(tempfile.TMP_MAX):
         name = next(names)
@@ -66,7 +68,8 @@ class FirefoxLogInterceptor(threading.Thread):
             with open(self.fifo, "rt") as f:
                 for line in f:
                     self.logger.debug(
-                        "BROWSER %i: driver: %s" % (self.browser_id, line.strip())
+                        "BROWSER %i: driver: %s" % (
+                            self.browser_id, line.strip())
                     )
                     if self.fifo is not None:
                         os.unlink(self.fifo)

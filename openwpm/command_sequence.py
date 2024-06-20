@@ -187,15 +187,15 @@ class CommandSequence:
     def append_command(self, command: BaseCommand, timeout: int = 30) -> None:
         self._commands_with_timeout.append((command, timeout))
 
-    def mark_done(self, success: bool) -> None:
+    def mark_done(self, visit_id: int, success: bool) -> None:
         if self.callback is not None:
-            self.callback(success)
+            self.callback(visit_id, success)
 
     def get_commands_with_timeout(self) -> List[Tuple[BaseCommand, int]]:
         """Returns a list of all commands in the command_sequence
         appended by a finalize command
         """
         commands = list(self._commands_with_timeout)
-        commands.insert(0, (InitializeCommand(), 10))
-        commands.append((FinalizeCommand(sleep=5), 10))
+        commands.insert(0, (InitializeCommand(url=self.url), 10))
+        commands.append((FinalizeCommand(url=self.url, sleep=5), 10))
         return commands

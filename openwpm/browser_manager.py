@@ -28,13 +28,14 @@ from .config import BrowserParamsInternal, ManagerParamsInternal
 from .deploy_browsers import deploy_firefox
 from .errors import BrowserConfigError, BrowserCrashError, ProfileLoadError
 from .socket_interface import ClientSocket
-from .storage.storage_providers import TableName
+from bannerclick.storage.storage_providers import TableName
 from .types import BrowserId, VisitId
 from .utilities.multiprocess_utils import (
     kill_process_and_children,
     parse_traceback_for_sentry,
 )
 from .utilities.storage_watchdog import profile_size_exceeds_max_size
+from bannerclick.config import SPAWN_TIMEOUT, UNSUCCESSFUL_SPAWN_LIMIT, SPAWN_TIMEOUT_INCREASE, BC_TEMP_DIR
 
 pickling_support.install()
 
@@ -59,8 +60,8 @@ class BrowserManagerHandle:
         browser_params: BrowserParamsInternal,
     ) -> None:
         # Constants
-        self._SPAWN_TIMEOUT = 120  # seconds
-        self._UNSUCCESSFUL_SPAWN_LIMIT = 4
+        self._SPAWN_TIMEOUT = SPAWN_TIMEOUT  # seconds
+        self._UNSUCCESSFUL_SPAWN_LIMIT = UNSUCCESSFUL_SPAWN_LIMIT
 
         # manager parameters
         self.current_profile_path: Optional[Path] = None
@@ -116,7 +117,8 @@ class BrowserManagerHandle:
         # to be a tar of the crashed browser's history
         if self.current_profile_path is not None:
             # tar contents of crashed profile to a temp dir
-            tempdir = tempfile.mkdtemp(prefix="openwpm_profile_archive_")
+            tempdir = tempfile.mkdtemp(
+                prefix="openwpm_profile_archive_", dir=BC_TEMP_DIR)
             tar_path = Path(tempdir) / "profile.tar"
 
             dump_profile(
@@ -127,7 +129,10 @@ class BrowserManagerHandle:
             )
 
             # make sure browser loads crashed profile
+            prev_recovery_tar = self.browser_params.recovery_tar
             self.browser_params.recovery_tar = tar_path
+            if prev_recovery_tar is not None:
+                shutil.rmtree(prev_recovery_tar, ignore_errors=True)
 
             crash_recovery = True
 
@@ -140,6 +145,8 @@ class BrowserManagerHandle:
 
         def check_queue(launch_status: Dict[str, bool]) -> Any:
             assert self.status_queue is not None
+            self.logger.critical(
+                f'Waiting for status queue to get {self._SPAWN_TIMEOUT} seconds')
             result = self.status_queue.get(True, self._SPAWN_TIMEOUT)
             if result[0] == "STATUS":
                 launch_status[result[1]] = True
@@ -148,11 +155,13 @@ class BrowserManagerHandle:
                 _, exc, tb = pickle.loads(result[1])
                 raise exc.with_traceback(tb)
             elif result[0] == "FAILED":
-                raise BrowserCrashError("Browser spawn returned failure status")
+                raise BrowserCrashError(
+                    "Browser spawn returned failure status")
 
         while not success and unsuccessful_spawns < self._UNSUCCESSFUL_SPAWN_LIMIT:
             self.logger.debug(
-                "BROWSER %i: Spawn attempt %i " % (self.browser_id, unsuccessful_spawns)
+                "BROWSER %i: Spawn attempt %i " % (
+                    self.browser_id, unsuccessful_spawns)
             )
             # Resets the command/status queues
             (self.command_queue, self.status_queue) = (Queue(), Queue())
@@ -177,7 +186,8 @@ class BrowserManagerHandle:
                 # 2. Profile tar loaded (if necessary)
                 check_queue(launch_status)
                 # 3. Display launched (if necessary)
-                self.display_pid, self.display_port = check_queue(launch_status)
+                self.display_pid, self.display_port = check_queue(
+                    launch_status)
                 # 4. Browser launch attempted
                 check_queue(launch_status)
                 # 5. Browser launched
@@ -214,18 +224,29 @@ class BrowserManagerHandle:
                 )
                 self.close_browser_manager()
                 if "Profile Created" in launch_status:
+                    self.logger.error(
+                        f'Profile Created: {browser_profile_path} should be deleted manually')
                     shutil.rmtree(browser_profile_path, ignore_errors=True)
+                if "Launch Attempted" not in status_strings:
+                    self._SPAWN_TIMEOUT += SPAWN_TIMEOUT_INCREASE
+                    self.logger.error(
+                        f'Increasing spawn timeout to {self._SPAWN_TIMEOUT} for browser {self.browser_id} due to unsuccessful spawn')
 
         # If the browser spawned successfully, we should update the
         # current profile path class variable and clean up the tempdir
         # and previous profile path.
         if success:
-            self.logger.debug("BROWSER %i: Browser spawn successful!" % self.browser_id)
+            self.logger.debug(
+                "BROWSER %i: Browser spawn successful!" % self.browser_id)
             previous_profile_path = self.current_profile_path
             self.current_profile_path = browser_profile_path
             if previous_profile_path is not None:
+                self.logger.error(
+                    f'Profile path: {previous_profile_path} should be deleted manually')
                 shutil.rmtree(previous_profile_path, ignore_errors=True)
             if tempdir is not None:
+                self.logger.error(
+                    f'Tempdir: {tempdir} should be deleted manually')
                 shutil.rmtree(tempdir, ignore_errors=True)
 
         return success
@@ -351,6 +372,10 @@ class BrowserManagerHandle:
         """
         assert self.browser_id is not None
         assert self.curr_visit_id is not None
+
+        IPC_shared_dict = task_manager.IPC_shared_dict
+        # IPC_shared_dict[self.curr_visit_id] = command_sequence.url
+
         task_manager.sock.store_record(
             TableName("site_visits"),
             self.curr_visit_id,
@@ -430,7 +455,8 @@ class BrowserManagerHandle:
                 error_text = parse_neterror(error_text)
                 self.logger.info(
                     "BROWSER %i: Received neterror %s while executing "
-                    "command: %s" % (self.browser_id, error_text, repr(command))
+                    "command: %s" % (
+                        self.browser_id, error_text, repr(command))
                 )
             else:
                 raise ValueError("Unknown browser status message %s" % status)
@@ -610,7 +636,8 @@ class BrowserManagerHandle:
     def shutdown_browser(self, during_init: bool, force: bool = False) -> None:
         """Runs the closing tasks for this Browser/BrowserManager"""
         # Close BrowserManager process and children
-        self.logger.debug("BROWSER %i: Closing browser manager..." % self.browser_id)
+        self.logger.debug(
+            "BROWSER %i: Closing browser manager..." % self.browser_id)
         self.close_browser_manager(force=force)
 
         # Archive browser profile (if requested)
@@ -638,7 +665,9 @@ class BrowserManagerHandle:
 
         # Clean up temporary files
         if self.current_profile_path is not None:
-            shutil.rmtree(self.current_profile_path, ignore_errors=True)
+            # shutil.rmtree(self.current_profile_path, ignore_errors=True)
+            self.logger.error(
+                f'Profile path: {self.current_profile_path} should be deleted manually')
 
 
 class BrowserManager(Process):
@@ -760,7 +789,8 @@ class BrowserManager(Process):
                     time.sleep(0.001)
                     continue
 
-                command: Union[ShutdownSignal, BaseCommand] = self.command_queue.get()
+                command: Union[ShutdownSignal,
+                               BaseCommand] = self.command_queue.get()
 
                 if isinstance(command, ShutdownSignal):
                     driver.quit()
@@ -802,7 +832,8 @@ class BrowserManager(Process):
                         exc_info=True,
                         extra=extra,
                     )
-                    self.status_queue.put(("FAILED", pickle.dumps(sys.exc_info())))
+                    self.status_queue.put(
+                        ("FAILED", pickle.dumps(sys.exc_info())))
 
         except self.critical_exceptions as e:
             self.logger.error(

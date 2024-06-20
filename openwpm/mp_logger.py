@@ -154,7 +154,9 @@ class MPLogger(object):
         # Attach console handler to log to console
         consoleHandler = logging.StreamHandler(sys.stdout)
         consoleHandler.setLevel(self._log_level_console)
-        formatter = logging.Formatter("%(module)-20s - %(levelname)-8s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(processName)-11s[%(threadName)-10s]"
+            "%(module)-20s - %(levelname)-8s - %(message)s")
         consoleHandler.setFormatter(formatter)
         logger.addHandler(consoleHandler)
 
@@ -206,7 +208,8 @@ class MPLogger(object):
             level=self._log_level_sentry_breadcrumb
         )
         self._event_handler = EventHandler(level=self._log_level_sentry_event)
-        sentry_sdk.init(dsn=self._sentry_dsn, before_send=self._sentry_before_send)
+        sentry_sdk.init(dsn=self._sentry_dsn,
+                        before_send=self._sentry_before_send)
         with sentry_sdk.configure_scope() as scope:
             if self._crawl_reference:
                 scope.set_tag(

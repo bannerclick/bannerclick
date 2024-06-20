@@ -36,8 +36,10 @@ def deploy_firefox(
     root_dir = os.path.dirname(__file__)  # directory of this file
 
     browser_profile_path = Path(
-        tempfile.mkdtemp(prefix="firefox_profile_", dir=browser_params.tmp_profile_dir)
+        tempfile.mkdtemp(prefix="firefox_profile_",
+                         dir=browser_params.tmp_profile_dir)
     )
+    logger.warning(f'browser_profile_path: {browser_profile_path}')
     status_queue.put(("STATUS", "Profile Created", browser_profile_path))
 
     # Use Options instead of FirefoxProfile to set preferences since the
@@ -149,7 +151,8 @@ def deploy_firefox(
     driver = webdriver.Firefox(
         options=fo,
         service=Service(
-            executable_path=geckodriver_path, log_output=open(interceptor.fifo, "w")
+            executable_path=geckodriver_path, log_output=open(
+                interceptor.fifo, "w")
         ),
     )
 

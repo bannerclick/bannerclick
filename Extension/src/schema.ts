@@ -147,6 +147,7 @@ export interface JavascriptOperation {
 
 export interface JavascriptCookie {
   expiry?: DateTime;
+  original_expiry?: DateTime;
   is_http_only?: number;
   is_host_only?: number;
   is_session?: number;
@@ -187,4 +188,5 @@ export interface JavascriptCookieRecord extends JavascriptCookie {
   event_ordinal?: number;
   record_type?: "deleted" | "added-or-changed" | "manual-export";
   change_cause?: OnChangedCause;
+  current_site?: string;
 }

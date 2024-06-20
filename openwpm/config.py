@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from json import JSONEncoder
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from bannerclick.config import BC_TEMP_DIR
 
 from dataclasses_json import DataClassJsonMixin
 from dataclasses_json import config as DCJConfig
@@ -101,7 +102,8 @@ class BrowserParams(DataClassJsonMixin):
     )
 
     tmp_profile_dir: Path = field(
-        default=Path(tempfile.gettempdir()),
+        # default=Path(tempfile.gettempdir()),
+        default=Path(BC_TEMP_DIR),
         metadata=DCJConfig(encoder=path_to_str, decoder=str_to_path),
     )
     """

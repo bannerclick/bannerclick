@@ -6,11 +6,14 @@ let debugging = false;
 let storageController = null;
 let logAggregator = null;
 let listeningSocket = null;
+let currentSite = null;
 
 const listeningSocketCallback = async (data) => {
   // This works even if data is an int
   const action = data.action;
+  logDebug(`action inside listeningsocketcallback ${action}`);
   let newVisitID = data.visit_id;
+  logDebug(`new visit id inside listeningsocketcallback ${newVisitID}`);
   switch (action) {
     case "Initialize":
       if (visitID) {
@@ -27,19 +30,31 @@ const listeningSocketCallback = async (data) => {
       if (newVisitID !== visitID) {
         logError(
           "Received Finalize but visit_id didn't match. " +
-            `Current visit_id ${newVisitID}, received visit_id ${visitID}.`,
+          `Current visit_id ${newVisitID}, received visit_id ${visitID}.`,
         );
       }
       data.browser_id = crawlID;
       data.success = true;
       storageController.send(JSON.stringify(["meta_information", data]));
       visitID = null;
+      currentSite = null;
+      break;
+    case "SetUrl":
+      if (newVisitID !== visitID) {
+        logError(
+          `MY DEBUG: setting URL but current visit id : ${data.visit_id} doesn't match with previous ${visitID}
+          current URL : ${data.current_site}`
+        );
+      }
+      currentSite = data.current_site;
+      logDebug(`MY DEBUG: ${currentSite}`);
       break;
     default:
       // Just making sure that it's a valid number before logging
       newVisitID = parseInt(data, 10);
       logDebug("Setting visit_id the legacy way");
       visitID = newVisitID;
+      currentSite = "DATA SENT IN BAD WAY";
   }
 };
 export const open = async function (
@@ -184,20 +199,28 @@ export const dataReceiver = {
 
 export const saveRecord = function (instrument, record) {
   record.visit_id = visitID;
+  if ("is_http_only" in record &&
+    "is_host_only" in record &&
+    "is_session" in record &&
+    "path" in record &&
+    "same_site" in record) {
+    record.current_site = currentSite;
+    // logDebug(`MY DEBUG: ${JSON.stringify(record, null, 2)}`)
+  }
 
   if (!visitID && !debugging) {
     // Navigations to about:blank can be triggered by OpenWPM. We drop those.
     if (instrument === "navigations" && record.url === "about:blank") {
       logDebug(
         "Extension-" +
-          crawlID +
-          " : Dropping navigation to about:blank in intermediate period",
+        crawlID +
+        " : Dropping navigation to about:blank in intermediate period",
       );
       return;
     }
     logWarn(
       `Extension-${crawlID} : visitID is null while attempting to insert into table ${instrument}\n` +
-        JSON.stringify(record),
+      JSON.stringify(record),
     );
     record.visit_id = -1;
   }

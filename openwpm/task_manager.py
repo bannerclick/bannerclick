@@ -23,19 +23,21 @@ from .command_sequence import CommandSequence
 from .errors import CommandExecutionError
 from .js_instrumentation import clean_js_instrumentation_settings
 from .mp_logger import MPLogger
-from .storage.storage_controller import DataSocket, StorageControllerHandle
-from .storage.storage_providers import (
+from bannerclick.storage.storage_controller import DataSocket, StorageControllerHandle
+from bannerclick.storage.storage_providers import (
     StructuredStorageProvider,
     UnstructuredStorageProvider,
 )
 from .utilities.multiprocess_utils import kill_process_and_children
 from .utilities.platform_utils import get_configuration_string, get_version
-from .utilities.storage_watchdog import StorageLogger
+from bannerclick.config import BROWSER_MEMORY_LIMIT
+from multiprocessing import Manager
+
 
 tblib.pickling_support.install()
 
 SLEEP_CONS = 0.1  # command sleep constant (in seconds)
-BROWSER_MEMORY_LIMIT = 1500  # in MB
+# BROWSER_MEMORY_LIMIT = 1500  # in MB
 
 STORAGE_CONTROLLER_JOB_LIMIT = 10000  # number of records in the queue
 
@@ -57,6 +59,7 @@ class TaskManager:
         structured_storage_provider: StructuredStorageProvider,
         unstructured_storage_provider: Optional[UnstructuredStorageProvider],
         logger_kwargs: Dict[Any, Any] = {},
+        visit_ids: Optional[Set[int]] = None,
     ) -> None:
         """Initialize the TaskManager with browser and manager config params
 
@@ -70,9 +73,13 @@ class TaskManager:
         logger_kwargs : dict, optional
             Keyword arguments to pass to MPLogger on initialization.
         """
+        self.visit_ids = visit_ids
+        self.IPC = Manager()
+        self.IPC_shared_dict = self.IPC.dict()
 
         validate_crawl_configs(manager_params_temp, browser_params_temp)
-        manager_params = ManagerParamsInternal.from_dict(manager_params_temp.to_dict())
+        manager_params = ManagerParamsInternal.from_dict(
+            manager_params_temp.to_dict())
         browser_params = [
             BrowserParamsInternal.from_dict(bp.to_dict()) for bp in browser_params_temp
         ]
@@ -96,7 +103,8 @@ class TaskManager:
         # Parse and flesh out js_instrument_settings
         for a_browsers_params in self.browser_params:
             js_settings = a_browsers_params.js_instrument_settings
-            cleaned_js_settings = clean_js_instrumentation_settings(js_settings)
+            cleaned_js_settings = clean_js_instrumentation_settings(
+                js_settings)
             a_browsers_params.cleaned_js_instrument_settings = cleaned_js_settings
 
         # Flow control
@@ -155,6 +163,8 @@ class TaskManager:
             )
         )
         self.unsaved_command_sequences: Dict[int, CommandSequence] = dict()
+        # self.counter_lock = threading.Lock()  # Lock for the counter
+        # self.COUNTER = 0
         self.callback_thread = threading.Thread(
             target=self._mark_command_sequences_complete, args=()
         )
@@ -282,8 +292,9 @@ class TaskManager:
         structured_storage_provider: StructuredStorageProvider,
         unstructured_storage_provider: Optional[UnstructuredStorageProvider],
     ) -> None:
+        # TODO: 1st
         self.storage_controller_handle = StorageControllerHandle(
-            structured_storage_provider, unstructured_storage_provider
+            structured_storage_provider, unstructured_storage_provider, self.IPC_shared_dict
         )
         self.storage_controller_handle.launch()
         self.manager_params.storage_controller_address = (
@@ -314,6 +325,9 @@ class TaskManager:
         if self.closing:
             return
         self.closing = True
+        # TODO:
+        print('=' * 60)
+        print('Task Manager being closed')
 
         for browser in self.browsers:
             if (
@@ -324,12 +338,22 @@ class TaskManager:
                 # Waiting for the command_sequence to be finished
                 browser.command_thread.join()
             browser.shutdown_browser(during_init, force=not relaxed)
+            print('shutting down browsers in the for LOOP')
 
+        # TODO:
+        print('MY DEBUG: Socket is being closed')
         self.sock.close()  # close socket to storage controller
+        print('MY DEBUG: Socket is closed')
         self.storage_controller_handle.shutdown(relaxed=relaxed)
+        print('MY DEBUG: Storage Controller Shutdown')
         self.logging_server.close()
+        self.logger.warning('logging server closed')
+
+        print('waiting for call back thread to join')
         if hasattr(self, "callback_thread"):
             self.callback_thread.join()
+        print('MY DEBUG: CALL BACK THREAD JOINED')
+        print('=' * 60)
 
     def _check_failure_status(self) -> None:
         """Check the status of command failures. Raise exceptions as necessary
@@ -343,7 +367,8 @@ class TaskManager:
         if not self.failure_status:
             return
 
-        self.logger.debug("TaskManager failure status set, halting command execution.")
+        self.logger.debug(
+            "TaskManager failure status set, halting command execution.")
         self._shutdown_manager()
         if self.failure_status["ErrorType"] == "ExceedCommandFailureLimit":
             raise CommandExecutionError(
@@ -370,17 +395,22 @@ class TaskManager:
 
         # Check status flags before starting thread
         if self.closing:
-            self.logger.error("Attempted to execute command on a closed TaskManager")
-            raise RuntimeError("Attempted to execute command on a closed TaskManager")
+            self.logger.error(
+                "Attempted to execute command on a closed TaskManager")
+            raise RuntimeError(
+                "Attempted to execute command on a closed TaskManager")
         self._check_failure_status()
         visit_id = self.storage_controller_handle.get_next_visit_id()
+        while self.visit_ids and visit_id in self.visit_ids:
+            visit_id = self.storage_controller_handle.get_next_visit_id()
         browser.set_visit_id(visit_id)
         if command_sequence.callback:
             self.unsaved_command_sequences[visit_id] = command_sequence
 
         # Start command execution thread
         args = (self, command_sequence)
-        thread = threading.Thread(target=browser.execute_command_sequence, args=args)
+        thread = threading.Thread(
+            target=browser.execute_command_sequence, args=args)
         thread.name = f"BrowserManagerHandle-{browser.browser_id}"
         browser.command_thread = thread
         thread.daemon = True
@@ -399,13 +429,23 @@ class TaskManager:
             visit_id_list = self.storage_controller_handle.get_new_completed_visits()
             if not visit_id_list:
                 time.sleep(1)
+                self.logger.warning(
+                    'inside mark command sequence complete for Loop')
                 continue
 
+            self.logger.error('new Visit Id is processed')
             for visit_id, successful in visit_id_list:
-                self.logger.debug("Invoking callback of visit_id %d", visit_id)
+                self.logger.info('''
+                                 Successful VISIT
+                                 VISIT ID: %s
+                                 Successful: %s
+                                 ''', visit_id, successful
+                                 )
+                self.logger.warning(
+                    "Invoking callback of visit_id %d", visit_id)
                 cs = self.unsaved_command_sequences.pop(visit_id, None)
                 if cs:
-                    cs.mark_done(successful)
+                    cs.mark_done(visit_id, successful)
 
     def execute_command_sequence(
         self, command_sequence: CommandSequence, index: Optional[int] = None
@@ -424,7 +464,8 @@ class TaskManager:
                 self.logger.info(
                     "Blocking command submission until the storage controller "
                     "is below the max queue size of %d. Current queue "
-                    "length %d. " % (STORAGE_CONTROLLER_JOB_LIMIT, agg_queue_size)
+                    "length %d. " % (
+                        STORAGE_CONTROLLER_JOB_LIMIT, agg_queue_size)
                 )
                 agg_queue_size = self.storage_controller_handle.get_status()
 
@@ -449,11 +490,13 @@ class TaskManager:
                     self.browsers[
                         index
                     ].current_timeout = command_sequence.total_timeout
-                    thread = self._start_thread(self.browsers[index], command_sequence)
+                    thread = self._start_thread(
+                        self.browsers[index], command_sequence)
                     break
                 time.sleep(SLEEP_CONS)
         else:
-            self.logger.info("Command index type is not supported or out of range")
+            self.logger.info(
+                "Command index type is not supported or out of range")
             return
 
         if command_sequence.blocking:
@@ -490,7 +533,8 @@ class TaskManager:
     ) -> None:
         """browse a website and visit <num_links> links on the page"""
         command_sequence = CommandSequence(url)
-        command_sequence.browse(num_links=num_links, sleep=sleep, timeout=timeout)
+        command_sequence.browse(num_links=num_links,
+                                sleep=sleep, timeout=timeout)
         command_sequence.reset = reset
         self.execute_command_sequence(command_sequence, index=index)
 

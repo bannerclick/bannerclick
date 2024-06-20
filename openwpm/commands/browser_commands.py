@@ -1,3 +1,4 @@
+import re
 import gzip
 import json
 import logging
@@ -31,6 +32,8 @@ from .utils.webdriver_utils import (
     scroll_down,
     wait_until_loaded,
 )
+
+from bannerclick.config import PROFILE_DUMP_URL_START
 
 # Constants for bot mitigation
 NUM_MOUSE_MOVES = 10  # Times to randomly move the mouse
@@ -349,7 +352,8 @@ class ScreenshotFullPageCommand(BaseCommand):
             ) < max_height and curr_scrollY != prev_scrollY:
                 # Scroll down to bottom of previous viewport
                 try:
-                    webdriver.execute_script("window.scrollBy(0, window.innerHeight)")
+                    webdriver.execute_script(
+                        "window.scrollBy(0, window.innerHeight)")
                 except WebDriverException:
                     logger.info(
                         "BROWSER %i: WebDriverException while scrolling, "
@@ -374,7 +378,8 @@ class ScreenshotFullPageCommand(BaseCommand):
             )
             return
 
-        _stitch_screenshot_parts(self.visit_id, self.browser_id, manager_params)
+        _stitch_screenshot_parts(
+            self.visit_id, self.browser_id, manager_params)
 
 
 class DumpPageSourceCommand(BaseCommand):
@@ -467,8 +472,9 @@ class FinalizeCommand(BaseCommand):
     visit_id
     """
 
-    def __init__(self, sleep):
+    def __init__(self, sleep, url=None):
         self.sleep = sleep
+        url = self.url = url
 
     def __repr__(self):
         return f"FinalizeCommand({self.sleep})"
@@ -485,8 +491,37 @@ class FinalizeCommand(BaseCommand):
         # This doesn't immediately stop data saving from the current
         # visit so we sleep briefly before unsetting the visit_id.
         time.sleep(self.sleep)
+
+        if self.url.startswith(PROFILE_DUMP_URL_START):
+            return
+
         msg = {"action": "Finalize", "visit_id": self.visit_id}
         extension_socket.send(msg)
+
+
+def extract_domain(url):
+    '''
+    test string :
+        https://google.com
+        https://www.google.com
+        www.google.com
+        ://google.com
+        /google.com
+        //google.com
+        http://www.google.com
+        http://google.com
+        google.com
+    '''
+    # Define a regular expression pattern to match various URL formats
+    pattern = r'^((https:\/\/|http:\/\/|:\/\/|\/|\/\/)?(www\.)?)?(\S*?)(?=\/|$)'
+
+    # Use the regular expression to extract the domain
+    match = re.match(pattern, url)
+    if match:
+        domain = match.group(4)
+        return domain
+    else:
+        return None
 
 
 class InitializeCommand(BaseCommand):
@@ -495,6 +530,10 @@ class InitializeCommand(BaseCommand):
     It initializes state both in the extensions as well in as the
     StorageController
     """
+
+    def __init__(self, url) -> None:
+        self.url = url
+        super().__init__()
 
     def __repr__(self):
         return "InitializeCommand()"
@@ -506,5 +545,13 @@ class InitializeCommand(BaseCommand):
         manager_params,
         extension_socket,
     ):
+        if self.url.startswith(PROFILE_DUMP_URL_START):
+            return
+
         msg = {"action": "Initialize", "visit_id": self.visit_id}
+        extension_socket.send(msg)
+
+        CURRENT_URL_FOR_EXTENSION = extract_domain(self.url)
+        msg = {"action": "SetUrl", "visit_id": self.visit_id,
+               "current_site": CURRENT_URL_FOR_EXTENSION}
         extension_socket.send(msg)

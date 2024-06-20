@@ -1,4 +1,5 @@
 import logging
+import os
 import tarfile
 from pathlib import Path
 
@@ -37,16 +38,43 @@ def dump_profile(
         tar_path.unlink()
 
     # backup and tar profile
-    if compress:
-        tar = tarfile.open(tar_path, "w:gz", errorlevel=1)
-    else:
-        tar = tarfile.open(tar_path, "w", errorlevel=1)
+    mode = "w:gz" if compress else "w"
+    tar = tarfile.open(tar_path, mode, errorlevel=1)
+
     logger.debug(
         "BROWSER %i: Backing up full profile from %s to %s"
         % (browser_params.browser_id, browser_profile_path, tar_path)
     )
 
-    tar.add(browser_profile_path, arcname="")
+    def add_to_tar(path, arc_path):
+        try:
+            tar.add(path, arc_path)
+        except FileNotFoundError:
+            logger.warning(f"Skipped missing file or directory: {path}")
+        except Exception as e:
+            logger.error(f"Error adding {path} to tar: {e}")
+
+    try:
+        tar.add(browser_profile_path, arcname="")
+    except FileNotFoundError as e:
+        logger.critical(f'Error adding {browser_profile_path} to tar: {e}')
+        # Modified part: Check if each item exists before adding
+        for root, dirs, files in os.walk(browser_profile_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arc_name = os.path.relpath(
+                    file_path, start=browser_profile_path)
+                add_to_tar(file_path, arc_name)
+
+            # Check and add empty directories only
+            if not files:  # This checks if the current directory has no files
+                dir_path = root  # 'root' is already the current directory path
+                arc_name = os.path.relpath(
+                    dir_path, start=browser_profile_path)
+                # Only add if directory is indeed empty (no files)
+                if not os.listdir(dir_path):
+                    add_to_tar(dir_path, arc_name + '/')
+
     archived_items = tar.getnames()
     tar.close()
 
@@ -122,7 +150,8 @@ def load_profile(
             f = tarfile.open(tar_path, "r", errorlevel=1)
         f.extractall(browser_profile_path)
         f.close()
-        logger.debug("BROWSER %i: Tarfile extracted" % browser_params.browser_id)
+        logger.debug("BROWSER %i: Tarfile extracted" %
+                     browser_params.browser_id)
 
     except Exception as ex:
         logger.critical(
