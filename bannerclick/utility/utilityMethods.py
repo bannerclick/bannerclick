@@ -736,4 +736,3 @@ def dnsmpi_detection(html):
             if b:
                 dnsmpi = substr
     return dnsmpi
-
