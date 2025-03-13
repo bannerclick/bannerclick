@@ -5,18 +5,21 @@ import queue
 import random
 import socket
 import time
+import traceback
+import sys
 from asyncio import IncompleteReadError, Task
 from asyncio.base_events import Server
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, NoReturn, Optional, Tuple
-
+from typing import Any, DefaultDict, Dict, List, NoReturn, Optional, Tuple, Union
+import threading
 from multiprocess import Queue
+from multiprocessing.sharedctypes import Value
 
 from openwpm.utilities.multiprocess_utils import Process
 
-from ..config import BrowserParamsInternal, ManagerParamsInternal
-from ..socket_interface import ClientSocket, get_message_from_reader
-from ..types import BrowserId, VisitId
+from openwpm.config import BrowserParamsInternal, ManagerParamsInternal
+from openwpm.socket_interface import ClientSocket, get_message_from_reader
+from openwpm.types import BrowserId, VisitId
 from .storage_providers import (
     StructuredStorageProvider,
     TableName,
@@ -29,7 +32,8 @@ ACTION_TYPE_FINALIZE = "Finalize"
 ACTION_TYPE_INITIALIZE = "Initialize"
 
 RECORD_TYPE_CREATE = "create_table"
-STATUS_TIMEOUT = 120  # seconds
+# STATUS_TIMEOUT = 120  # seconds
+STATUS_TIMEOUT = 1 * 60 * 60  # seconds
 SHUTDOWN_SIGNAL = "SHUTDOWN"
 BATCH_COMMIT_TIMEOUT = 30  # commit a batch if no new records for N seconds
 
@@ -53,6 +57,10 @@ class StorageController:
         status_queue: Queue,
         completion_queue: Queue,
         shutdown_queue: Queue,
+        # shared_data: Dict,
+        # shared_data_threadlock: threading.Lock
+        task_count: Union[Value, int],
+        IPC_shared_dict: Dict,
     ) -> None:
         """
         Parameters
@@ -72,17 +80,22 @@ class StorageController:
         self._shutdown_flag = False
         self._relaxed = False
         self.logger = logging.getLogger("openwpm")
-        self.store_record_tasks: DefaultDict[VisitId, list[Task[None]]] = defaultdict(
+        self.store_record_tasks: DefaultDict[VisitId, List[Task[None]]] = defaultdict(  # Task Storage
             list
         )
         """Contains all store_record tasks for a given visit_id"""
-        self.finalize_tasks: list[tuple[VisitId, Optional[Task[None]], bool]] = []
+        self.finalize_tasks: List[Tuple[VisitId,
+                                        Optional[Task[None]], bool]] = []
         """Contains all information required for update_completion_queue to work
             Tuple structure is: VisitId, optional completion token, success
         """
         self.structured_storage = structured_storage
+        self.structured_storage.set_IPC_shared_dict(IPC_shared_dict)
         self.unstructured_storage = unstructured_storage
         self._last_record_received: Optional[float] = None
+        # self.shared_data = shared_data
+        # self.shared_data_threadlock = shared_data_threadlock
+        self.task_count = task_count
 
     async def _handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -115,7 +128,8 @@ class StorageController:
                 )
                 break
             if len(record) != 2:
-                self.logger.error("Query is not the correct length %s", repr(record))
+                self.logger.error(
+                    "Query is not the correct length %s", repr(record))
                 continue
 
             self._last_record_received = time.time()
@@ -246,17 +260,41 @@ class StorageController:
             task_count = 0
             for task_list in self.store_record_tasks.values():
                 for task in task_list:
-                    if not task.done():
-                        task_count += 1
+                    if task.done():
+                        continue
+                    task_count += 1
+
+            # with self.shared_data_threadlock :
+            #     self.shared_data['task_count'] = task_count
+            self.task_count.value = task_count
+
+            if False:
+                self.logger.error(
+                    f'''
+                    ================================================
+                        inside Storage Controller Update Status Queue
+                        task count: {self.task_count}
+                        task count id: {id(self.task_count)}
+                        
+                        task_count value: {self.task_count.value}
+                        task_count value id: {id(self.task_count.value)}
+                    ================================================
+                    '''
+                )
             self.status_queue.put(task_count)
-            self.logger.debug(
-                (
-                    "StorageController status: There are currently %d scheduled tasks "
-                    "for %d visit_ids"
-                ),
-                task_count,
-                visit_id_count,
-            )
+            if task_count != 0:
+                self.logger.error(
+                    (
+                        """
+======================================================================================
+StorageController status: There are currently %d scheduled tasks
+for %d visit_ids
+======================================================================================
+                        """
+                    ),
+                    task_count,
+                    visit_id_count,
+                )
 
     async def shutdown(self, completion_queue_task: Task[None]) -> None:
         self.logger.info("Entering self.shutdown")
@@ -327,7 +365,8 @@ class StorageController:
         while not (self._shutdown_flag and len(self.finalize_tasks) == 0):
             # This list is needed because iterating over a list and changing it at the same time
             # is forbidden
-            new_finalize_tasks: List[Tuple[VisitId, Optional[Task[None]], bool]] = []
+            new_finalize_tasks: List[Tuple[VisitId,
+                                           Optional[Task[None]], bool]] = []
             for visit_id, token, success in self.finalize_tasks:
                 if (
                     not token or token.done()
@@ -426,7 +465,9 @@ class StorageControllerHandle:
         self,
         structured_storage: StructuredStorageProvider,
         unstructured_storage: Optional[UnstructuredStorageProvider],
+        IPC_shared_dict: Dict,
     ) -> None:
+
         self.listener_address: Optional[Tuple[str, int]] = None
         self.listener_process: Optional[Process] = None
         self.status_queue = Queue()
@@ -435,12 +476,17 @@ class StorageControllerHandle:
         self._last_status = None
         self._last_status_received: Optional[float] = None
         self.logger = logging.getLogger("openwpm")
+        self.task_count: Union[Value, int] = Value('i', -1)
         self.storage_controller = StorageController(
             structured_storage,
             unstructured_storage,
             status_queue=self.status_queue,
             completion_queue=self.completion_queue,
             shutdown_queue=self.shutdown_queue,
+            # shared_data=self.shared_data,
+            # shared_data_threadlock=self.shared_data_threadlock
+            task_count=self.task_count,
+            IPC_shared_dict=IPC_shared_dict,
         )
 
     def get_next_visit_id(self) -> VisitId:
@@ -524,7 +570,8 @@ class StorageControllerHandle:
     def shutdown(self, relaxed: bool = True) -> None:
         """Terminate the storage controller process"""
         assert isinstance(self.storage_controller, Process)
-        self.logger.debug("Sending the shutdown signal to the Storage Controller...")
+        self.logger.debug(
+            "Sending the shutdown signal to the Storage Controller...")
         self.shutdown_queue.put((SHUTDOWN_SIGNAL, relaxed))
         start_time = time.time()
         self.storage_controller.join(300)
@@ -547,6 +594,8 @@ class StorageControllerHandle:
 
         # Check last status signal
         if (time.time() - self._last_status_received) > STATUS_TIMEOUT:
+            if self.status_queue.empty():
+                self.status_queue.put(0)
             raise RuntimeError(
                 "No status update from the storage controller process "
                 "for %d seconds." % (time.time() - self._last_status_received)

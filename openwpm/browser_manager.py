@@ -28,7 +28,7 @@ from .config import BrowserParamsInternal, ManagerParamsInternal
 from .deploy_browsers import deploy_firefox
 from .errors import BrowserConfigError, BrowserCrashError, ProfileLoadError
 from .socket_interface import ClientSocket
-from bannerclick.storage.storage_providers import TableName
+from openwpm.storage.storage_providers import TableName
 from .types import BrowserId, VisitId
 from .utilities.multiprocess_utils import (
     kill_process_and_children,

@@ -218,6 +218,7 @@ def extract_CMP_data(CMP_raw_dict):
         return CMP_raw_dict
     except Exception as ex:
         print("failed to continue extracting CMP data for domain: " + ex.__str__())
+        return CMP_raw_dict
 
 
 def get_info(entry, used_re, display_string):
@@ -271,10 +272,11 @@ def run_cmp_detection():
     try:
         detect_cmp(CMP)
     except Exception as ex:
-        with open(log_file, 'a+') as f:
-            print("failed to continue detecting CMP for domain: " +
-                  this_domain + " " + ex.__str__(), file=f)
-            MyExceptionLogger(err=ex, file=f)
+        pass
+        # with open(log_file, 'a+') as f:
+            # print("failed to continue detecting CMP for domain: " +
+            #       " " + ex.__str__(), file=f)
+            # MyExceptionLogger(err=ex, file=f)
     return CMP
 
 
@@ -299,21 +301,23 @@ def set_webdriver(web_driver=None):
             try:
                 driver.maximize_window()
             except Exception as ex:
-                with open(log_file, 'a+') as f:
-                    print(
-                        f"failed in cd.set_webdriver first time: f{ex.__str__()}", file=f)
-                    MyExceptionLogger(err=ex, file=f)
-                    time.sleep(2)
-                    try:
-                        driver.maximize_window()
-                    except Exception as ex:
-                        print(
-                            f"failed in cd.set_webdriver second time: f{ex.__str__()}", file=f)
-                        MyExceptionLogger(err=ex, file=f)
+                pass
+                # with open(log_file, 'a+') as f:
+                    # print(
+                    #     f"failed in cd.set_webdriver first time: f{ex.__str__()}", file=f)
+                    # MyExceptionLogger(err=ex, file=f)
+                    # time.sleep(2)
+                    # try:
+                    #     driver.maximize_window()
+                    # except Exception as ex:
+                        # print(
+                        #     f"failed in cd.set_webdriver second time: f{ex.__str__()}", file=f)
+                        # MyExceptionLogger(err=ex, file=f)
     except Exception as ex:
-        with open(log_file, 'a+') as f:
-            print(f"failed in cd.set_webdriver: f{ex.__str__()}", file=f)
-            MyExceptionLogger(err=ex, file=f)
+        # with open(log_file, 'a+') as f:
+        #     print(f"failed in cd.set_webdriver: f{ex.__str__()}", file=f)
+        #     MyExceptionLogger(err=ex, file=f)
+        pass
     return driver
 
 

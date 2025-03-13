@@ -23,8 +23,8 @@ from .command_sequence import CommandSequence
 from .errors import CommandExecutionError
 from .js_instrumentation import clean_js_instrumentation_settings
 from .mp_logger import MPLogger
-from bannerclick.storage.storage_controller import DataSocket, StorageControllerHandle
-from bannerclick.storage.storage_providers import (
+from openwpm.storage.storage_controller import DataSocket, StorageControllerHandle
+from openwpm.storage.storage_providers import (
     StructuredStorageProvider,
     UnstructuredStorageProvider,
 )
@@ -429,8 +429,8 @@ class TaskManager:
             visit_id_list = self.storage_controller_handle.get_new_completed_visits()
             if not visit_id_list:
                 time.sleep(1)
-                self.logger.warning(
-                    'inside mark command sequence complete for Loop')
+                # self.logger.warning(
+                #     'inside mark command sequence complete for Loop')
                 continue
 
             self.logger.error('new Visit Id is processed')

@@ -5,6 +5,67 @@
  * AND Schema-Documentation.md
  */
 
+
+
+/*
+# custom tables
+*/
+CREATE TABLE IF NOT EXISTS visits (
+    visit_id INTEGER PRIMARY KEY,
+    site_rank INTEGER,
+    domain VARCHAR(100),
+	url VARCHAR(200),
+	run_url VARCHAR(200),
+	status INTEGER,
+	lang VARCHAR(50),
+	banners INTEGER DEFAULT 0,
+	btn_status INTEGER,
+    btn_set_status INTEGER,
+    interact_mode INTEGER,
+    gpt_usage INTEGER,
+    interact_time INTEGER,
+    goal VARCHAR(100),
+	ttw INTEGER,
+	__cmp BOOLEAN DEFAULT FALSE,
+	__tcfapi BOOLEAN DEFAULT FALSE,
+	__tcfapiLocator DEFAULT FALSE,
+	cmp_id INTEGER,
+	cmp_name VARCHAR(100),
+	pv BOOLEAN DEFAULT FALSE,
+    nc_cmp_name VARCHAR(100),
+    dnsmpi VARCHAR(100),
+    with_sub BOOLEAN DEFAULT FALSE,
+    body_html TEXT
+);
+
+CREATE TABLE IF NOT EXISTS banners (
+	banner_id INTEGER PRIMARY KEY,
+    visit_id INTEGER,
+    domain VARCHAR(100),
+    lang VARCHAR(50),
+	iFrame BOOLEAN DEFAULT FALSE,
+    shadow_dom BOOLEAN DEFAULT FALSE,
+	captured_area FLOAT,
+	x INTEGER,
+	y INTEGER,
+	w INTEGER,
+	h INTEGER,
+    is_sub BOOLEAN DEFAULT FALSE,
+	FOREIGN KEY(visit_id) REFERENCES visits(visit_id)
+);
+
+CREATE TABLE IF NOT EXISTS htmls (
+	banner_id INTEGER PRIMARY KEY,
+    visit_id INTEGER,
+    domain VARCHAR(100),
+    html TEXT,
+    html_short TEXT,
+    FOREIGN KEY(visit_id) REFERENCES visits(visit_id)
+);
+/* custom tables end*/
+
+
+
 CREATE TABLE IF NOT EXISTS task (
     task_id INTEGER PRIMARY KEY AUTOINCREMENT,
     start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -168,6 +229,7 @@ CREATE TABLE IF NOT EXISTS javascript_cookies(
     record_type TEXT,
     change_cause TEXT,
     expiry DATETIME,
+    original_expiry DATETIME,
     is_http_only INTEGER,
     is_host_only INTEGER,
     is_session INTEGER,
@@ -179,7 +241,9 @@ CREATE TABLE IF NOT EXISTS javascript_cookies(
     same_site TEXT,
     first_party_domain TEXT,
     store_id STRING,
-    time_stamp DATETIME
+    partition_key TEXT,
+    time_stamp DATETIME,
+    current_site TEXT
 );
 
 /*
@@ -231,7 +295,7 @@ CREATE TABLE IF NOT EXISTS incomplete_visits (
    visit_id INTEGER NOT NULL
 );
 
-/* 
+/*
 # DNS Requests
  */
 CREATE TABLE IF NOT EXISTS dns_responses (
@@ -243,6 +307,54 @@ CREATE TABLE IF NOT EXISTS dns_responses (
   addresses TEXT,
   used_address TEXT,
   canonical_name TEXT,
-  is_TRR INTEGER, 
+  is_TRR INTEGER,
   time_stamp DATETIME NOT NULL
  );
+
+
+
+/*
+# bc_cookies
+*/
+CREATE TABLE IF NOT EXISTS bc_cookies(
+    id INTEGER PRIMARY KEY ASC,
+    browser_id INTEGER NOT NULL,
+    visit_id INTEGER NOT NULL,
+    extension_session_uuid TEXT,
+    event_ordinal INTEGER,
+    record_type TEXT,
+    change_cause TEXT,
+    expiry DATETIME,
+    original_expiry DATETIME,
+    is_http_only INTEGER,
+    is_host_only INTEGER,
+    is_session INTEGER,
+    host TEXT,
+    is_secure INTEGER,
+    name TEXT,
+    path TEXT,
+    value TEXT,
+    same_site TEXT,
+    first_party_domain TEXT,
+    store_id STRING,
+    time_stamp DATETIME,
+    current_site TEXT
+);
+
+
+/*
+# sent_cookies
+*/
+CREATE TABLE IF NOT EXISTS sent_cookies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    value TEXT,
+    host TEXT,
+    visit_id INTEGER NOT NULL,
+    event_ordinal INTEGER,
+    url TEXT NOT NULL,
+    top_level_url TEXT,
+    time_stamp DATETIME NOT NULL,
+    request_id INTEGER NOT NULL,
+    resource_type TEXT NOT NULL
+);

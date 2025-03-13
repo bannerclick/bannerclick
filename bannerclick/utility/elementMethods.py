@@ -7,10 +7,18 @@ from selenium.webdriver.common.by import By
 from .textMethods import *
 # from utilityMethods import get_win_inner_size
 
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+
 
 
 def find_parent(el: WebElement):
     return el.find_element(By.XPATH, './..')
+
+
+def find_first_child(el: WebElement):
+    return el.find_element(By.CSS_SELECTOR, ":first-child")
 
 
 def calc_area(size):
@@ -190,18 +198,22 @@ def html_attr_contains_words(el: WebElement, words):
             return True
     return False
 
+
 def is_inside_button(el: WebElement):
-    temp = el
-    counter = 0
-    while True:
-        if temp.tag_name == "html" or counter > 4:
-            return None
-        elif is_button(temp):
-            return temp
-        elif is_button(temp) or html_attr_contains_words(el, ['btn', 'button']):
-            return temp
-        temp = find_parent(temp)
-        counter += 1
+    try:
+        temp = el
+        counter = 0
+        while True:
+            if temp.tag_name == "html" or counter >= 3:
+                return None
+            elif is_button(temp):
+                return temp
+            elif is_button(temp) or html_attr_contains_words(el, ['btn', 'button']):
+                return temp
+            temp = find_parent(temp)
+            counter += 1
+    except:
+        return None
 
 
 def is_pos_int_zindex(el: WebElement):  # check if z-index is positive integer value
@@ -263,7 +275,26 @@ def find_fixed_ancestors(els: list[WebElement]):
 def entries_to_remove(entries, list):
     for ent in entries:
         if ent in list:
-            list.remove(ent)
+            try:
+                list.remove(ent)
+            except:
+                pass
+
+
+def is_unrelated_element(el: WebElement) -> bool:
+    unrelated_tags = ['header', 'footer', "html"]
+    try:
+        parent_el = find_parent(el)
+        return el.tag_name.lower() in unrelated_tags or parent_el.tag_name.lower() in unrelated_tags
+    except:
+        return False
+
+
+def focus_on_element(element: WebElement):
+    try:
+        element.parent.execute_script("arguments[0].focus();", element)
+    except:
+        pass
 
 
 def pruning_btns(els: list[WebElement]):  # delete some unrelated els, like those that are options which usually are found in footers and headers of a webpage, and also rules out script elements.
@@ -272,11 +303,18 @@ def pruning_btns(els: list[WebElement]):  # delete some unrelated els, like thos
         try:
             if is_wordy(el):
                 unrelated_btns.append(el)
+            elif is_not_wordy(el):
+                unrelated_btns.append(el)
+            elif contains_dot_pattern(el):
+                unrelated_btns.append(el)
             elif is_one_dimension(el):
                 unrelated_btns.append(el)
             elif not el.is_displayed():
             # elif not el.is_displayed() or not el.is_enabled():
                 unrelated_btns.append(el)
+            elif is_unrelated_element(el):
+                unrelated_btns.append(el)
+
         except Exception as E:
             unrelated_btns.append(el)
     entries_to_remove(unrelated_btns, els)
@@ -291,11 +329,17 @@ def remove_els_with_words(els: list[WebElement], words, lang, check_attr=True):
     entries_to_remove(to_remove, els)
 
 
+
+
+
 def keep_els_with_words(els: list[WebElement], words, lang, check_attr=True):
     to_remove = []
     words_list = extend_all_words(words, lang)
     for el in els:
-        if not if_contains_words(el, words_list, check_attr):
+        try:
+            if not if_contains_words(el, words_list, check_attr):
+                to_remove.append(el)
+        except:
             to_remove.append(el)
     entries_to_remove(to_remove, els)
 
@@ -322,10 +366,27 @@ def is_wordy(el: WebElement, threshold=5):
     return len(words) > threshold
 
 
+def is_not_wordy(el, threshold=2):
+    char_count = len(el.text)
+    return char_count < threshold
+
+
+def contains_dot_pattern(el):
+    try:
+        pattern = r'\b[^.\s]+\.[^.\s]+\b'
+        match = re.search(pattern, el.text)
+        return bool(match)
+    except:
+        return False
+
+
 def if_contains_words(el: WebElement, words, check_attr=True):
     for word in words:
-        if word in el.text.lower() or (check_attr and html_attr_contains_words(el, words)):
-            return True
+        try:
+            if word in el.text.lower() or (check_attr and html_attr_contains_words(el, words)):
+                return True
+        except:
+            pass
     return False
 
 
@@ -385,11 +446,42 @@ def to_html(el: WebElement):
     try:
         html = el.get_attribute("outerHTML")
     except:
-        html = el.parent.execute_script("return arguments[0].outerHTML;", el)
+        try:
+            html = el.parent.execute_script("return arguments[0].outerHTML;", el)
+        except:
+            return ""
     return html
 
 
+def is_element_stale(element):
+    try:
+        # Try to do something with the element
+        element.is_displayed()  # You can use any method like click(), text, etc.
+        return False
+    except StaleElementReferenceException:
+        return True
 
+
+def is_availble(driver: WebDriver, element: WebElement):
+    try:
+        # Check for staleness first
+        WebDriverWait(driver, 1).until(EC.staleness_of(element))
+        # print("Element is no longer present (stale).")
+        return False
+    except TimeoutException:
+        try:
+            # If not stale, check for visibility
+            WebDriverWait(driver, 1).until(EC.visibility_of(element))
+            # print("Element is visible.")
+            return True
+        except TimeoutException:
+            # print("Element is hidden or not visible.")
+            return False
+    except StaleElementReferenceException:
+        # print("Element is no longer present (stale).")
+        return False
+    except:
+        return False
 
 def xpath_soup(element):
     # type: (typing.Union[bs4.element.Tag, bs4.element.NavigableString]) -> str

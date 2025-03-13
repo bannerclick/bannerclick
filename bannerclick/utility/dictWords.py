@@ -1,10 +1,13 @@
 
 accept_words = ['accept', 'agree', 'confirm', 'consent', 'allow', 'accept1', 'accept2', 'accept3']
-non_acceptable = ['disagree']
+non_acceptable = ['disagree', 'do not', "don't", "just", "only", "without"]
 
-reject_words = ['reject', 'disagree', 'decline', 'deny', 'refuse', 'reject1', 'reject2']
+reject_words = ['reject', 'disagree', 'decline', 'deny', 'refuse', 'reject1', 'reject2', 'do not', "only"]
 
-setting_words = ['setting', 'manage', 'option', 'choice', 'purpose', 'preference', 'customize', 'configur']
+setting_words = ['setting', 'manage', 'purpose',  'customize', 'configur']
+more_setting_words = ['option', 'choice', 'preference']
+
+reject_setting_words = ['reject', 'decline', 'confirm', 'selected', 'save', 'submit', 'only']
 
 login_words = ['login', 'einloggen']
 
@@ -28,7 +31,7 @@ words = {
         'deny': 'deny',
         'refuse': 'refuse',
         'reject1': 'disable',
-        'reject2': 'reject2',
+        'reject2': 'essential',
         'setting': 'setting',
         'manage': 'manage',
         'option': 'option',
@@ -46,7 +49,17 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
-    },
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
+
+},
     'de': {
         'cookies': 'cookies',
         'cookies1': 'cookies2',
@@ -84,6 +97,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'es': {
         'cookies': 'cookies',
@@ -108,7 +130,7 @@ words = {
         'setting': 'ajuste',
         'manage': 'administrar',
         'option': 'opcione',
-        'choice': 'choice',
+        'submit': 'submit',
         'purpose': 'purpose',
         'preference': 'preferencia',
         'customize': 'personalizar',
@@ -122,6 +144,16 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
+
     },
     'it': {
         'cookies': 'cookies',
@@ -160,6 +192,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'pt': {
         'cookies': 'cookies',
@@ -198,6 +239,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'zh': {
         'cookies': '承诺',
@@ -236,6 +286,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'ru': {
         'cookies': 'cookies',
@@ -274,6 +333,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'ja': {
         'cookies': 'クッキー',
@@ -312,6 +380,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'fr': {
         'cookies': 'cookies',
@@ -350,11 +427,20 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'tr': {
         'cookies': 'çerezler',
         'cookies1': 'cookies',
-        'cookie': 'çerezi',
+        'cookie': 'çerez',
         'Cookie': 'Çerezi',
         'accept': 'kabul',
         'agree': 'kabul',
@@ -388,6 +474,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'fa': {
         'cookies': 'کوکی',
@@ -426,6 +521,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     'sv': {
         'cookies': 'cookies',
@@ -440,7 +544,7 @@ words = {
         'accept1': 'accept1',
         'accept2': 'accept2',
         'accept3': 'accept3',
-        'reject': 'reject',
+        'reject': 'avvisa',
         'disagree': 'disagree',
         'decline': 'decline',
         'deny': 'deny',
@@ -448,7 +552,7 @@ words = {
         'reject1': 'disable',
         'reject2': 'reject2',
         'setting': 'inställningar',
-        'manage': 'manage',
+        'manage': 'hantera',
         'option': 'option',
         'choice': 'choice',
         'purpose': 'purpose',
@@ -464,6 +568,15 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
     # 'ar': {
     #     'cookies': 'ملفات تعريف',
@@ -538,5 +651,14 @@ words = {
         'all': 'all',
         'login': 'login',
         'einloggen': 'einloggen',
+        'selected': 'selected',
+        'save': 'save',
+        'preference': 'preference',
+        'submit': 'submit',
+        'only': 'only',
+        'do not': 'do not',
+        "don't": "don't",
+        "just": 'just',
+        "without": 'without'
     },
 }

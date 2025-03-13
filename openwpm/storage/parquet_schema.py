@@ -169,6 +169,7 @@ fields = [
     pa.field("record_type", pa.string()),
     pa.field("change_cause", pa.string()),
     pa.field("expiry", pa.string()),
+    pa.field("original_expiry", pa.string()),
     pa.field("is_http_only", pa.bool_()),
     pa.field("is_host_only", pa.bool_()),
     pa.field("is_session", pa.bool_()),
@@ -181,6 +182,7 @@ fields = [
     pa.field("first_party_domain", pa.string()),
     pa.field("store_id", pa.string()),
     pa.field("time_stamp", pa.string()),
+    # pa.field("current_site", pa.string()),
 ]
 PQ_SCHEMAS["javascript_cookies"] = pa.schema(fields)
 
@@ -244,3 +246,47 @@ fields = [
     pa.field("instance_id", pa.uint32(), nullable=False),
 ]
 PQ_SCHEMAS["dns_responses"] = pa.schema(fields)
+
+# my_cookies
+# TODO: Remove this, don't change openwpm schema
+fields = [
+    pa.field("browser_id", pa.uint32()),
+    pa.field("visit_id", pa.int64()),
+    pa.field("instance_id", pa.uint32(), nullable=False),
+    pa.field("extension_session_uuid", pa.string()),
+    pa.field("event_ordinal", pa.int64()),
+    pa.field("record_type", pa.string()),
+    pa.field("change_cause", pa.string()),
+    pa.field("expiry", pa.string()),
+    pa.field("original_expiry", pa.string()),
+    pa.field("is_http_only", pa.bool_()),
+    pa.field("is_host_only", pa.bool_()),
+    pa.field("is_session", pa.bool_()),
+    pa.field("host", pa.string()),
+    pa.field("is_secure", pa.bool_()),
+    pa.field("name", pa.string()),
+    pa.field("path", pa.string()),
+    pa.field("value", pa.string()),
+    pa.field("same_site", pa.string()),
+    pa.field("first_party_domain", pa.string()),
+    pa.field("store_id", pa.string()),
+    pa.field("time_stamp", pa.string()),
+    # pa.field("current_site", pa.string()),
+]
+PQ_SCHEMAS["bc_cookies"] = pa.schema(fields)
+
+# sent_cookies
+# TODO: Remove this, don't change openwpm schema
+fields = [
+    pa.field('name', pa.string(), nullable=False),
+    pa.field('value', pa.string()),
+    pa.field("host", pa.string(), nullable=False),
+    pa.field("visit_id", pa.int64(), nullable=False),
+    pa.field("event_ordinal", pa.int64()),
+    pa.field("url", pa.string(), nullable=False),
+    pa.field("top_level_url", pa.string()),
+    pa.field("time_stamp", pa.string(), nullable=False),
+    pa.field("request_id", pa.int64(), nullable=False),
+    pa.field("resource_type", pa.string(), nullable=False),
+]
+PQ_SCHEMAS["sent_cookies"] = pa.schema(fields)

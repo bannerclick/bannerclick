@@ -76,7 +76,7 @@ class CommandSequence:
 
     def get(self, sleep=0, timeout=60):
         """goes to a url"""
-        self.total_timeout += timeout
+        self.total_timeoutdemo.py += timeout
         command = GetCommand(self.url, sleep)
         self._commands_with_timeout.append((command, timeout))
         self.contains_get_or_browse = True

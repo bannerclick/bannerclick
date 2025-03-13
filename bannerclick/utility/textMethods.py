@@ -116,6 +116,8 @@ def detect_lang(text: str):
 
 
 def extend_all_words(word_list, lang):
+    if not lang:
+        lang = 'de'
     all_words = [words["en"][word] for word in word_list]
     if lang is not None and lang in words:
         all_words.extend([words[lang][word] for word in word_list])

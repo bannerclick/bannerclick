@@ -178,20 +178,25 @@ def close_tab(driver: WebDriver, next_tab=0):
 
 
 def get_current_domain(driver: WebDriver, url=None):
-    if url == "":
+    try:
+        if url == "":
+            return ""
+        if url is None:
+            url = driver.current_url
+        if 'www.' in url:
+            domain = url.split('www.')[1]
+        elif '://' in url:
+            domain = url.split('://')[1]
+        else:
+            domain = url
+        return domain.split('/')[0].split('%')[0]
+    except:
         return ""
-    if url is None:
-        url = driver.current_url
-    if 'www.' in url:
-        domain = url.split('www.')[1]
-    elif '://' in url:
-        domain = url.split('://')[1]
-    else:
-        domain = url
-    return domain.split('/')[0].split('%')[0]
 
 
 def make_url(domain: str, mode=1):
+    if "http" in domain:
+        return domain
     url = ""
     if mode == 1:
         url = "https://" + domain
@@ -373,6 +378,18 @@ def open_domain_page(driver, domain):
             mode += 1
 
 
+def get_iframes(driver):
+    try:
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        if len(iframes) > 4:
+            del_invisible_els(iframes)
+            if len(iframes) > 4:
+                iframes = iframes[-2:]
+    except:
+        return []
+    return iframes
+
+
 def find_CMP_cookies_iframes(driver: WebDriver, lang='en'):
     frames_with_cookie = []
     iframes = driver.find_elements(By.TAG_NAME, "iframe")
@@ -483,6 +500,7 @@ def get_shadowhost_children_list(driver):
     all = driver.find_elements(By.XPATH, "/html/body/*")
     all.extend(driver.find_elements(By.XPATH, "/html/body/*/*"))
     host_children = []
+    count = 0
     for el in all:
         try:
             shadow_root = el.shadow_root
@@ -493,16 +511,19 @@ def get_shadowhost_children_list(driver):
             children = el.shadow_root.find_elements(By.CSS_SELECTOR, "*")
             first_child = None
             for child in children:
-                if child.get_attribute("id"):
+                if child.tag_name == "style":
+                    realchild.append(child)
+                if child.get_attribute("id") and first_child is None:
                     first_child = child
-                    break
+                    child_id = first_child.get_attribute("id")
+
             if first_child:
                 realchild.append(first_child)
-                fc_id = first_child.get_attribute("id")
-                if fc_id:
-                    siblings = el.shadow_root.find_elements(By.CSS_SELECTOR, "#" + fc_id + " ~ *")
+                if child_id:
+                    siblings = el.shadow_root.find_elements(By.CSS_SELECTOR, "#" + child_id + " ~ *")
                     realchild.extend(siblings)
                     host_children.append([el, realchild])
+        count += 1
     return host_children
 
 
@@ -516,34 +537,40 @@ def del_cloned_shadow_hosts(driver):
         pass
 
 
-def click_func(btns, filename, sc):
+def click_func(el, btns, filename, sc):
     tag_btns = find_tag_buttons(btns)  # prioritize elements which are <button> tag
-    flag = click_on_btns(tag_btns, filename, sc)
+    flag = click_on_btns(el, tag_btns, filename, sc)
     if not flag:
         entries_to_remove(tag_btns, btns)
-        flag = click_on_btns(btns, filename, sc)
+        flag = click_on_btns(el, btns, filename, sc)
     return flag
 
 
-def find_btns_by_list(banner, word_list, lang, html_attr):
+def find_btns_by_list(banner, word_list, lang, html_attr, ):
     nom_words = extend_all_words(word_list, lang)
     con_str = concat_with_or(nom_words)
     btns = []
-    if not html_attr:
-        btns = banner.find_elements(By.XPATH, to_xpath_text(con_str))
-    else:
-        btns.extend(banner.find_elements(By.XPATH, to_xpath_class(con_str)))
-        btns.extend(banner.find_elements(By.XPATH, to_xpath_id(con_str)))
-    btns = list(set(btns))
+    try:
+        if not html_attr:
+            btns = banner.find_elements(By.XPATH, to_xpath_text(con_str))
+        else:
+            btns.extend(banner.find_elements(By.XPATH, to_xpath_class(con_str)))
+            btns.extend(banner.find_elements(By.XPATH, to_xpath_id(con_str)))
+    except:
+        pass
     pruning_btns(btns)
     return btns
 
 
-def find_reject_btns(banner):
-    rej_words = [words['en'][word] for word in reject_words]
+def find_reject_btns(banner, setting=False):
+    if setting:
+        rej_list = reject_setting_words
+    else:
+        rej_list = reject_words
+    rej_words = [words['en'][word] for word in rej_list]
     detected_lang = detect_lang(banner.text)
     if detected_lang is not None and detected_lang in words:
-        rej_words.extend([words[detected_lang][word] for word in reject_words])
+        rej_words.extend([words[detected_lang][word] for word in rej_list])
     rej_btns = banner.find_elements(By.XPATH, to_xpath_text(concat_with_or(rej_words)))
     pruning_btns(rej_btns)
     return rej_btns
@@ -598,47 +625,78 @@ def translate_page(driver: WebDriver):
             print("failed to switch to trans_frame" + " " + ex.__str__())
 
 
-def click_on_btns(btns: list[WebElement], file_name, sc):
+def click_on_btns(el, btns: list[WebElement], file_name, sc):
     flag = False
+    if btns:
+        if "reject" not in btns[0].text.lower():
+            btns.reverse()
+    btn_texts = [btn.text for btn in btns]
+
     for j, btn in enumerate(btns):
-        btn_png_file = file_name + ".png"
-        if sc:
-            btn.screenshot(btn_png_file)
-        flag = click_and_check(btn, file_name)
-        if flag:
-            break
-        elif btn.text == find_parent(btn).text:
-            flag = click_and_check(find_parent(btn), file_name) # click on the parent node
-            if flag:
-                break
-        if sc:
-            os.remove(btn_png_file)
+        try:
+            if is_element_stale(btn):
+                temp_btns = el.find_elements(By.XPATH, f"//button[text()='{btn_texts[j]}']")
+            else:
+                temp_btns = [btn]
+            for temp_btn in temp_btns:
+                btn_png_file = file_name + "_" + str(j) + ".png"
+                try:
+                    if sc:
+                        temp_btn.screenshot(btn_png_file)
+                    now_flag = click_and_check(temp_btn, file_name)
+                    if now_flag:
+                        flag = True
+                    elif temp_btn.text == find_parent(temp_btn).text:
+                        now_flag = click_and_check(find_parent(temp_btn), file_name) # click on the parent node
+                        if now_flag:
+                            flag = True
+                    if not now_flag:
+                        os.remove(btn_png_file)
+                    time.sleep(0.1)
+                except:
+                    pass
+        except Exception as ex:
+            pass
     return flag
 
 
-def click_and_check(btn, file_name):
+def click_and_check(btn: WebElement, file_name):
     btn_tag = is_inside_button(btn)
+    btn_name = "div"
     # Click
     try:
+
         # btn.click()
         if btn_tag and btn_tag.text == btn.text:
             btn = btn_tag
+            btn_name = "button"
+        # focus_on_element(btn)
         btn.send_keys(Keys.RETURN)
+        try:
+            btn.click()
+        except:
+            pass
     except Exception as E:
         try:
             btn.click()
         except:
             try:
-                find_parent(btn).click()
+                if not if_btn_clicked(btn):
+                    parent = find_parent(btn)
+                    if parent.text == btn.text:
+                        parent.click()
             except:
-                return False
+                try:
+                    find_first_child(btn).click()
+                except:
+                    return False
     # Check
     try:
-        time.sleep(0.5)
-        if (btn_tag and 'INset_' not in file_name) or if_btn_clicked(btn):
+        time.sleep(0.3)
+        if (btn_name == "button" and 'INset_' not in file_name) or if_btn_clicked(btn):
             return True
         else:
-            time.sleep(1.1)
+            time.sleep(1)
             if if_btn_clicked(btn):
                 return True
             else:
@@ -648,9 +706,10 @@ def click_and_check(btn, file_name):
 
 
 def if_btn_clicked(btn):
-    return not btn.is_displayed() or not btn.is_enabled() or not is_inside_viewport(btn) or not clickable(btn)
-
-
+    try:
+        return not btn.is_displayed() or not btn.is_enabled() or not is_inside_viewport(btn) or not clickable(btn)
+    except:
+        return True
 
 
 def dnsmpi_detection(html):
