@@ -16,13 +16,13 @@ from openwpm.commands.types import BaseCommand
 from openwpm.commands.browser_commands import tab_restart_browser, close_other_windows, bot_mitigation
 from openwpm.config import BrowserParams, ManagerParams
 from openwpm.socket_interface import ClientSocket
-from bannerclick.storage.storage_controller import DataSocket
-from bannerclick.storage.storage_providers import TableName
+from openwpm.storage.storage_controller import DataSocket
+from openwpm.storage.storage_providers import TableName
 
 import bannerclick.bannerdetection as bc
 import bannerclick.cmpdetection as cd
 
-from bannerclick.config import log_file, MOBILE_AGENT
+from bannerclick.config import log_file, MOBILE_AGENT, TEST_RUN, RUN_SUFFIX
 from bannerclick.bannerdetection import MyExceptionLogger
 
 
@@ -153,30 +153,36 @@ class CMPBCommand(BaseCommand):
     run all the Get, Bannerdetection, CMPDetection and SetEntry Command in one single command.
     """
 
-    def __init__(self, url, sleep, index, timeout, choice):
+    def __init__(self, url, sleep, index, timeout, choice, goal="no"):
         self.logger = logging.getLogger("openwpm")
         self.url = url
         self.sleep = sleep
         self.index = index
         self.timeout = timeout
         self.choice = choice
+        self.goal = goal
 
     def __repr__(self):
-        return "CMPBCommand({},{},{},{})".format(self.url, self.sleep, self.index, self.timeout, self.choice)
+        return "CMPBCommand({},{},{},{})".format(self.url, self.sleep, self.index, self.timeout, self.choice, self.goal)
 
     def init_data(self):
         Data.url = self.url
         Data.index = self.index
         Data.sleep = self.sleep
+        Data.choice = self.choice
+        Data.goal = self.goal
         Data.ttw = 0
-        Data.btn_status = {"btn_status": None, "btn_set_status": None}
+        # Data.btn_status = {"btn_status": 0, "btn_set_status": 0, "gpt_usage": 0}
+        Data.btn_status = {"btn_status": 0, "btn_set_status": 0}
         Data.nc_cmp_name = None
         Data.banners = []
         Data.banners_data = []
-        Data.CMP = None
+        Data.CMP = {}
         Data.interact_time = 0
         Data.start_time = datetime.now()
         Data.finish_time = 0
+        Data.visit_id = self.visit_id
+        Data.lang = None
 
     def save_into_incomplete_visits(self):
         pass
@@ -192,18 +198,23 @@ class CMPBCommand(BaseCommand):
             # if "https://www.tribunnews.com" == self.url:
             #     i = 0
             # TODO: Added by Me
-            print("INSIDE CMPB")
-            tab_restart_browser(webdriver)
-            print("AFTER TAB RESTART CMPB")
+
 
             # webdriver = bd.create_driver_session(webdriver.session_id, webdriver.command_executor._url)
             # webdriver = bd.set_webdriver()
-            webdriver.set_page_load_timeout(self.timeout)
             error_flag = False
-            exception = None
-            # webdriver.uninstall_addon('openwpm@mozilla.org')
-            bc.set_webdriver(webdriver)
-            time.sleep(5)
+            try:
+                print("INSIDE CMPB")
+                tab_restart_browser(webdriver)
+                print("AFTER TAB RESTART CMPB")
+                webdriver.set_page_load_timeout(self.timeout)
+
+                exception = None
+                # webdriver.uninstall_addon('openwpm@mozilla.org')
+                bc.set_webdriver(webdriver)
+                time.sleep(1)
+            except:
+                pass
             # agent = webdriver.execute_script("return navigator.userAgent")
             # print('\n\nagent:  ', agent)
             # print('\n\nsize:  ', webdriver.get_window_size())
@@ -220,57 +231,83 @@ class CMPBCommand(BaseCommand):
                     Data.status = 0
                 except TimeoutException:  # timeout
                     Data.status = 1
+                    error_flag = True
                 except Exception as E:  # unreachable
                     Data.status = 2
                     error_flag = True
                     exception = E
 
-    #        time.sleep(self.sleep)
 
             # Close modal dialog if exists
             try:
                 WebDriverWait(webdriver, 0.5).until(EC.alert_is_present())
                 alert = webdriver.switch_to.alert
                 alert.dismiss()
-                time.sleep(1)
+                time.sleep(0.1)
             except (TimeoutException, WebDriverException):
                 pass
 
-            try:  # TODO: START OF FAILURE
-                close_other_windows(webdriver)
+            try:
+                try:
+                    try:
+                        close_other_windows(webdriver)
+                    except:
+                        pass
+                    Data.start_time = datetime.now()
+                    if browser_params.bot_mitigation:
+                        bot_mitigation(webdriver)
+                    # current_url = webdriver.current_url
 
-                if browser_params.bot_mitigation:
-                    bot_mitigation(webdriver)
-                current_url = webdriver.current_url
-
-                # Don't run banner detection if choice is 0
-                self.init_data()
-                if not bc.BANNERCLICK:
-                    time.sleep(self.sleep)
+                    # Don't run banner detection if choice is 0
+                    self.init_data()
+                    if not bc.BANNERCLICK:
+                        time.sleep(self.sleep)
+                except:
+                    pass
 
                 # # Run banner detection and interaction
                 else:
-                    banners = bc.run_banner_detection(Data)
-                    Data.banners = banners
-                    Data.banners_data = bc.extract_banners_data(banners)
-                    bc.interact_with_banners(Data, self.choice)
-                    if bc.SLEEP_AFTER_INTERACTION:
-                        Data.start_time = datetime.now()
-                    cd.set_webdriver(webdriver)
-                    Data.CMP = cd.run_cmp_detection()
+
+                    if not error_flag:
+                        banners = []
+                        if self.choice:
+                            banners = bc.run_banner_detection(Data)
+                            bc.take_page_sc(Data)
+                        if banners or RUN_SUFFIX in self.goal or self.choice==0 or bc.HA_RUN:
+                            Data.banners = banners
+                            Data.banners_data = bc.extract_banners_data(banners)
+
+                            main_sleep = 30
+                            # main_sleep = 15
+                            last_sleep = 10
+                            last_sleep = 60
+                            if bc.INTRACTABLE and "stateless" in self.goal and RUN_SUFFIX not in self.goal and not bc.HA_RUN:
+                                Data.finish_time = bc.halt_for_sleep(Data.start_time, main_sleep)
+                            if self.choice:
+                                bc.interact_with_banners(Data, self.choice)
+                            if bc.INTRACTABLE and ("stateful" in self.goal or RUN_SUFFIX in self.goal):
+                                Data.finish_time = bc.halt_for_sleep(Data.start_time, main_sleep)
+                            if bc.INTRACTABLE and ("stateless" in self.goal and RUN_SUFFIX not in self.goal):
+                                Data.finish_time = bc.halt_for_sleep(datetime.now(), last_sleep)
+
+                        if bc.HA_RUN or not bc.INTRACTABLE and (bc.WAITANYWAY or self.choice and banners):
+                            Data.finish_time = bc.halt_for_sleep(Data.start_time, Data.sleep)
+                        try:
+                            cd.set_webdriver(webdriver)
+                            Data.CMP = cd.run_cmp_detection()
+                        except:
+                            pass
+                    else:
+                        bc.take_page_sc(Data)
                     Data.sql_addr = manager_params.storage_controller_address
                     bc.set_data_in_db_error(Data)
-                    if bc.WAITANYWAY or self.choice and banners:
-                        bc.halt_for_sleep(Data)
 
-                    # TODO: sleep for debugging
-                    # flag = True
-                    # while flag :
-                    #     time.sleep(30)
-                    #     continue
+                    if TEST_RUN:
+                        time.sleep(5)
+
             except Exception as ex:
                 with open(log_file, 'a+') as f:
-                    print("failed in CMPBCommand for url: " +
+                    print("failed in CMPBCommand for url (first): " +
                           self.url + " " + ex.__str__(), file=f)
                     MyExceptionLogger(err=ex, file=f)
 
@@ -282,10 +319,10 @@ class CMPBCommand(BaseCommand):
             try:
                 if self.choice == 0:
                     self.logger.info(
-                        "CMPB command is successfully executed for {} (without Interaction).".format(current_url))
+                        "CMPB command is successfully executed for {} (without Interaction).".format(self.url))
                 else:
-                    self.logger.info("CMPB command is successfully executed and result for {} is: number of banners {} and CMP existance {}.".format(
-                        current_url, len(banners), Data.CMP['__tcfapi']))
+                    self.logger.info("CMPB command is successfully executed and result for {} is: number of banners {} with index: {}.".format(
+                        self.url, len(Data.banners), self.index))
             except Exception as ex:
                 with open(log_file, 'a+') as f:
                     print("failed in CMPBCommand for url: " +
