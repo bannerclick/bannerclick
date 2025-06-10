@@ -124,7 +124,7 @@ if TEST_RUN:
 # run_name = "random_pc"
 # run_name = "ha_700_acc_stateless"
 
-run_name = "test_artifact"
+run_name = "test-artifact"
 
 LOAD_STATE_DIF = False
 load_run_name = "random"

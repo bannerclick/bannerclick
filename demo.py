@@ -63,6 +63,7 @@ HEADLESS = args.headless
 # REVERSE = args.reverse
 # input_file = args.target_file
 num_browsers = args.num_browsers
+browser_free = [True] * num_browsers
 print("browsers ", num_browsers)
 if TEST_RUN:
     target_file_name = "./bannerclick/input-files/" + urls_file
@@ -195,7 +196,7 @@ def new_sequence_exe(site, index, browser_index, manager, goal, reset, choice=2)
     manager.execute_command_sequence(command_sequence, index=browser_index)
 
 
-browser_free = [True] * num_browsers
+
 
 
 def handle_site_task(site, index, browser_index, manager):
@@ -236,7 +237,7 @@ def sc_run(site, index, browser_index, manager, choice=2):
     if TASK_COUNT_SLEEP and not TEST_RUN:
         task_sleep(manager)
 
-def ha_run(site, index, browser_index, manager, choice=2):
+def js_2_run(site, index, browser_index, manager, choice=2):
     # new_sequence_exe(site, index, browser_index, manager, "stateless_rej_gpc", False, 2)
     # new_sequence_exe(site, index, browser_index, manager, "stateless_rej_gpc" + RUN_SUFFIX, True, 0)
     # time.sleep(1)
@@ -379,7 +380,7 @@ try:
                             # )
                         else:
                             manager.logger.error(
-                                f"accepting the banner {site}, {index} ")
+                                f"rejecting the banner {site}, {index} ")
                             goal = "stateful_phase"
                             command_sequence = CommandSequence(
                                 url=site,
@@ -394,7 +395,7 @@ try:
                                     sleep=SLEEP_TIME,
                                     index=index,
                                     timeout=TIME_OUT,
-                                    choice=1,
+                                    choice=2,
                                     goal=goal
                                 ),
                                 timeout=TIME_OUT * 8,
@@ -412,8 +413,6 @@ try:
                         manager.execute_command_sequence(command_sequence)
 
                 error_count = 0
-
-
             except:
                 if error_count >= 10:
                     raise
