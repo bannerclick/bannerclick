@@ -273,7 +273,7 @@ class CMPBCommand(BaseCommand):
                         if self.choice:
                             banners = bc.run_banner_detection(Data)
                             bc.take_page_sc(Data)
-                        if banners or RUN_SUFFIX in self.goal or self.choice==0 or bc.HA_RUN:
+                        if banners or RUN_SUFFIX in self.goal or self.choice==0 or bc.JS_RUN:
                             Data.banners = banners
                             Data.banners_data = bc.extract_banners_data(banners)
 
@@ -281,7 +281,7 @@ class CMPBCommand(BaseCommand):
                             # main_sleep = 15
                             last_sleep = 10
                             last_sleep = 60
-                            if bc.INTRACTABLE and "stateless" in self.goal and RUN_SUFFIX not in self.goal and not bc.HA_RUN:
+                            if bc.INTRACTABLE and "stateless" in self.goal and RUN_SUFFIX not in self.goal and not bc.JS_RUN:
                                 Data.finish_time = bc.halt_for_sleep(Data.start_time, main_sleep)
                             if self.choice:
                                 bc.interact_with_banners(Data, self.choice)
@@ -290,7 +290,7 @@ class CMPBCommand(BaseCommand):
                             if bc.INTRACTABLE and ("stateless" in self.goal and RUN_SUFFIX not in self.goal):
                                 Data.finish_time = bc.halt_for_sleep(datetime.now(), last_sleep)
 
-                        if bc.HA_RUN or not bc.INTRACTABLE and (bc.WAITANYWAY or self.choice and banners):
+                        if bc.JS_RUN or not bc.INTRACTABLE and (bc.WAITANYWAY or self.choice and banners):
                             Data.finish_time = bc.halt_for_sleep(Data.start_time, Data.sleep)
                         try:
                             cd.set_webdriver(webdriver)

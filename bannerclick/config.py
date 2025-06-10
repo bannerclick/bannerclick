@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 
-COMPLETE_RUN = False     # perform the run for two stateless and stateful phase
+COMPLETE_RUN = True     # perform the run for two stateless and stateful phase
 STATELESS_PHASE = True
 
 TEST_RUN = False
@@ -23,6 +23,7 @@ WAITANYWAY = True
 ZOOMING = False
 BROWSER_INDEX = True
 # Translate the page using "Google Translate"; Turned off since Google detect the tool as bot
+JS_RUN = False
 TRANSLATION = False
 BANNERCLICK = True
 CMPDETECTION = True
@@ -55,8 +56,8 @@ RETRY_NUMBER = -1        # number of retry for banner detection
 HTTP_INSTRUMENT = True      # enabling recording HTTP requests and responses
 JS_INSTRUMENT = True       # enabling recording JS events
 COOKIE_INSTRUMENT = True    # enabling recording cookies
-NAV_INSTRUMENT = True      # enabling recording navigation events
-DNS_INSTRUMENT = True      # enabling recording navigation events
+NAV_INSTRUMENT = False      # enabling recording navigation events
+DNS_INSTRUMENT = False      # enabling recording navigation events
 
 
 # GPT detection and rejection settings; this was a enhancement to repeat missed or failed detection and interaction with GPT
@@ -68,9 +69,9 @@ API_KEY = "X_YOUR_API_KEY_X"   # GPT API key
 
 
 START_POINT = 0                      # the index of the first website to start from in the target list
-STEP_SIZE = 20000                    # the number of websites to crawl started from the start point
+STEP_SIZE = 400                    # the number of websites to crawl started from the start point
 # STEP_SIZE = 10000
-SWITCH_INDEX = 10000                  # the index of the website to switch from stateful to stateless
+SWITCH_INDEX = 200                  # the index of the website to switch from stateful to stateless
 URL_MODE = 1     # prepending: 1. https, 2. http
 NUM_BROWSERS = 1               # number of browsers to run in parallel
 # TIME_OUT = 60     # OpenWPM timeout = TIME_OUT*11, Selenium timeout = TIME_OUT
@@ -93,7 +94,7 @@ RUN_SUFFIX = "_reload"
 
 verbose = "--SP"+str(START_POINT)
 # verbose = "--tranco-top" + str(STEP_SIZE) +"--run"
-urls_file = "50k_random.csv"
+# urls_file = "50k_random.csv"
 # urls_file = "top-1m-old.csv"
 # urls_file = "rejected_random.csv"
 # urls_file = "rejected_random_reverse.csv"
@@ -102,18 +103,15 @@ urls_file = "50k_random.csv"
 # urls_file = "regular_reverse_with_banners.csv"
 # urls_file = "regular_with_banners.csv"
 # urls_file = "rejected_10k_2.csv"
-urls_file = "rejected_20k.csv"
-
-urls_file = "random_withbanner_stateful.csv"
-
-urls_file = 'domain_ali.txt'
-
+# urls_file = "rejected_20k.csv"
+# urls_file = "random_withbanner_stateful.csv"
 # urls_file = "random_reverse_withbanner_stateful.csv"
-
 # urls_file = "50k_random.csv"
-
 # urls_file = "with_banner.txt"
 # urls_file = "customSites.txt"
+
+urls_file = "top-1m-old.csv"
+
 
 if TEST_RUN:
     SCREENSHOT = True
@@ -122,9 +120,11 @@ if TEST_RUN:
 # run_name = "random-refresh"
 # run_name = "regular-refresh"
 # run_name = "js_first"
-run_name = "random_pc_test"
-run_name = "random_pc"
-run_name = "ha_700_acc_stateless"
+# run_name = "random_pc_test"
+# run_name = "random_pc"
+# run_name = "ha_700_acc_stateless"
+
+run_name = "test_artifact"
 
 LOAD_STATE_DIF = False
 load_run_name = "random"

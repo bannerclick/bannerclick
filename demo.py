@@ -343,13 +343,13 @@ try:
                             # Wait for the current task to complete before moving to the next iteration
                             # future.result()
                         elif STATELESS_PHASE:
-                            # future = executor.submit(
-                            #     stateless_phase,
-                            #     site,
-                            #     index,
-                            #     browser_index,
-                            #     manager,
-                            # )
+                            future = executor.submit(
+                                stateless_phase,
+                                site,
+                                index,
+                                browser_index,
+                                manager,
+                            )
                             # future = executor.submit(
                             #     sc_run,
                             #     site,
@@ -359,14 +359,14 @@ try:
                             #     choice=2
                             # )
 
-                            future = executor.submit(
-                                ha_run,
-                                site,
-                                index,
-                                browser_index,
-                                manager,
-                                choice=1
-                            )
+                            # future = executor.submit(
+                            #     ha_run,
+                            #     site,
+                            #     index,
+                            #     browser_index,
+                            #     manager,
+                            #     choice=1
+                            # )
 
 
                             # future = executor.submit(
