@@ -23,17 +23,39 @@ def MyExceptionLogger(err, file):
     exc_type, exc_value, exc_traceback = sys.exc_info()
     print(f"Exception type: {exc_type}, Value: {exc_value}", file=file)
     traceback.print_tb(exc_traceback, file=file)
+    
+
 try:
     from .utility.utilityMethods import *
+except ImportError:
+    try:
+        from utility.utilityMethods import *
+    except ImportError:
+        raise ImportError("Failed to import utilityMethods")
+
+try:
     from .config import *
+except ImportError:
+    try:
+        from config import *
+    except ImportError:
+        raise ImportError("Failed to import config")
+
+try:
     from . import cmpdetection as cd
+except ImportError:
+    try:
+        import cmpdetection as cd
+    except ImportError:
+        raise ImportError("Failed to import cmpdetection")
+
+try:
     from .subscriptiondetection import sub_detection
-except ImportError as E:
-    print("run the module as a script")
-    from utility.utilityMethods import *
-    from config import *
-    import cmpdetection as cd
-    from subscriptiondetection import sub_detection
+except ImportError:
+    try:
+        from subscriptiondetection import sub_detection
+    except ImportError:
+        raise ImportError("Failed to import sub_detection")
 
 
 from selenium import webdriver

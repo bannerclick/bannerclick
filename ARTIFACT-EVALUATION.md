@@ -31,7 +31,8 @@ The measurements do not require any special hardware. As long as the machine can
 
 ### Software Requirements
 
-All measurements were conducted using a Debian-based Linux distribution. Software dependencies are listed in the `environment.yaml` file. These will be installed during the installation using Conda.
+All measurements were conducted using a Debian-based Linux distribution with Kernel: Linux 4.19.0-20-cloud-amd64.
+Software dependencies are listed in the `environment.yaml` file. These will be installed during the installation using Conda (we used Conda version 23.1.0).
 
 ### Estimated Time and Storage Requirements
 
