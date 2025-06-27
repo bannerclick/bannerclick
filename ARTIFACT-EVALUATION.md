@@ -33,6 +33,7 @@ The measurements do not require any special hardware. As long as the machine can
 
 All measurements were conducted using a Debian-based Linux distribution with Kernel: Linux 4.19.0-20-cloud-amd64.
 Software dependencies are listed in the `environment.yaml` file. These will be installed during the installation using Conda (we used Conda version 23.1.0).
+Note that OpenWPM is officially supported only for Linux platfrom.
 
 ### Estimated Time and Storage Requirements
 
@@ -114,11 +115,19 @@ jupyter-lab
 
 ### Results
 
-The main contribution is the measurement of intractable cookies under different scenarios. The figures are generated within `analysis.ipynb` and are labeled consistently with the sections in the paper where they are discussed. For instance, to plot the ECDF for the sample run:
+The main contribution is the measurement of intractable cookies under different scenarios. The figures are generated within `analysis.ipynb` and are labeled consistently with the sections in the paper where they are discussed. The figure below is a screenshot of the table of contents in JupyterLab. The first four subsections before section 1.5 ("Results") include functions and preprocessing snippets that perform initial tasks such as fetching data from the databases, storing them in dataframes, and running the initial preprocessing needed for further analysis in the results section. As shown, in the results section, each figure is labeled with the same number as it appears in the paper.
+
+![list](list.PNG)
+
+After running the prerequisite functions, you can plot the figures for the captured data using the provided ready-to-use methods. For instance, to plot the ECDF for the sample run:
 
 ```python
 ecdf_plot_for_stateful_cookies(map_of_stateful_count, test_artifact, fig_name="FIG", data_test=None)
 ```
+
+Which results in the following figure:
+
+![example](example.PNG)
 
 Note: The sample run results in a lower average (e.g., 3.47 intractable cookies) due to the limited scope (only 200 domains for stage 1).
 
