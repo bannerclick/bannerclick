@@ -69,6 +69,12 @@ git checkout tags/v0.26.0_pets25_artifact
 conda activate openwpm
 ```
 
+Note: On some systems, it may be necessary to install the following packages to enable crawling:
+
+```bash
+sudo apt-get install -y libx11-xcb1 libdbus-glib-1-2 libxt6 libasound2 libgtk-3-0 libgdk-pixbuf2.0-0 libdrm2
+```
+
 ### Testing the Environment
 
 You can verify that everything is working by running:
